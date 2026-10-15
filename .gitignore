@@ -1,5 +1,6 @@
-# VS Code Folder
+# VS Code
 .vscode
+*.code-workspace
 
 # Prerequisites
 *.d
@@ -72,3 +73,10 @@ Testing/
 
 # .res files
 *.res
+
+# installer file
+*.msi
+
+#WiX files
+*.wixpdb
+*.wixobj
