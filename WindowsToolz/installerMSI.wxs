@@ -4,7 +4,7 @@
         Id="*"
         Name="Windows Toolz"
         Manufacturer="AnNeedle"
-        Version="0.0.1"
+        Version="0.0.2"
         UpgradeCode="a19542dada294ce798526125d11736d7"
         Language="1045">
         <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine"/>
@@ -50,6 +50,7 @@
                     <Directory Id="BatchFolder" Name="batch">
                         <Component Id="BatchFiles" Guid="332beb7c130c4dfba4c4b38113ba98b2">
                             <File Source="batch\IconCache.bat"/>
+                            <File Source="batch\SystemFix.bat"/>
                         </Component>
                     </Directory>
                     <Directory Id="AssetsFolder" Name="assets">
