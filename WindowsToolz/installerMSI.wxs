@@ -4,7 +4,7 @@
         Id="*"
         Name="Windows Toolz"
         Manufacturer="AnNeedle"
-        Version="0.1.1"
+        Version="0.2.0"
         UpgradeCode="a19542dada294ce798526125d11736d7"
         Language="1045">
         <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine"/>
