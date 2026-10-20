@@ -1,8 +1,10 @@
 ﻿#include <SFML\Graphics.hpp>
+#include <iostream>
 #include <windows.h>
 #include <string>
 #include <vector>
 #include <dwmapi.h>
+#include <conio.h>
 
 enum class Screen {
     MainMenu,
@@ -83,7 +85,75 @@ std::string LoadColorMode() {
     return "SystemDefault";
 }
 
-int main() {
+void drawMenu(const std::vector<std::string>& MainMenuOptions, int selected) {
+    system("cls");
+    std::cout << " __          ___           _                     _______          _ \n";
+    std::cout << " \\ \\        / (_)         | |                   |__   __|        | |\n";
+    std::cout << "  \\ \\  /\\  / / _ _ __   __| | _____      _____     | | ___   ___ | |___\n";
+    std::cout << "   \\ \\/  \\/ / | | '_ \\ / _` |/ _ \\ \\ /\\ / / __|    | |/ _ \\ / _ \\| |_  /\n";
+    std::cout << "    \\  /\\  /  | | | | | (_| | (_) \\ V  V /\\__ \\    | | (_) | (_) | |/ /\n";
+    std::cout << "     \\/  \\/   |_|_| |_|\\__,_|\\___/ \\_/\\_/ |___/    |_|\\___/ \\___/|_/___|\n\n";
+    for(int i = 0; i < MainMenuOptions.size(); i++) {
+        if(i == selected) {
+            std::cout << " > " << MainMenuOptions[i] << " <\n";
+        } else {
+            std::cout << "   " << MainMenuOptions[i] << "\n";
+        }
+    }
+}
+
+void drawSettings(const std::vector<std::string>& SettingsOptions, int selected) {
+    system("cls");
+    std::cout << "SETTINGS\n\n";
+    for(int i = 0; i < SettingsOptions.size(); i++) {
+        if(i == selected) {
+            std::cout << " > " << SettingsOptions[i] << " <\n";
+        } else {
+            std::cout << "   " << SettingsOptions[i] << "\n";
+        }
+    }
+}
+
+void drawBatchSettings(const std::vector<std::string>& BatchOptions, int selected) {
+    system("cls");
+    std::cout << "EDIT BATCH FILES\n\n";
+    for(int i = 0; i < BatchOptions.size(); i++) {
+        if(i == selected) {
+            std::cout << " > " << BatchOptions[i] << " <\n";
+        } else {
+            std::cout << "   " << BatchOptions[i] << "\n";
+        }
+    }
+}
+
+void UpdateCliTheme() {
+    HWND hwnd = GetConsoleWindow();
+    std::string mode = LoadColorMode();
+    BOOL useDark;
+    if(mode == "Dark") {
+        system("color 0F");
+        useDark = TRUE;
+    } else if(mode == "Light") {
+        system("color F0");
+        useDark = FALSE;
+    } else {
+        bool dark = GetSystemColorMode();
+        if(dark) {
+            system("color 0F");
+        } else {
+            system("color F0");
+        }
+        useDark = dark ? TRUE : FALSE;
+    }
+    DwmSetWindowAttribute(
+        hwnd,
+        20,
+        &useDark,
+        sizeof(useDark)
+    );
+}
+
+int RunGUI() {
     char path[MAX_PATH];
     GetModuleFileNameA(NULL, path, MAX_PATH);
     std::string exePath(path);
@@ -157,6 +227,7 @@ int main() {
     sf::Text SettingsBack("Back", font);
     sf::Text btnColor("Mode: Unknown", font);
     sf::Text btnBatch("Edit Batch Files", font);
+    sf::Text btnCliMode("Enter CLI Mode", font);
     //BATCH EDITING TEXTS
     sf::Text BatchTitle("Which Batch file do you want to edit?", font);
     sf::Text BatchBack("Back", font);
@@ -167,7 +238,7 @@ int main() {
     sf::Text AboutTitle("About Windows Toolz", font);
     sf::Text AboutBack("Back", font);
     sf::Text AboutAuthor("Author: AnNeedle", font);
-    sf::Text AboutVersion("Version: 0.0.3-alpha", font);
+    sf::Text AboutVersion("Version: 0.1.0-beta", font);
     std::vector<sf::Text*> texts = {
         &titleT,
         &btnSettings,
@@ -177,6 +248,7 @@ int main() {
         &btnIconCache,
         &btnSystemFix,
         &btnBatch,
+        &btnCliMode,
         &BatchTitle,
         &BatchBack,
         &IconCacheEdit,
@@ -200,6 +272,7 @@ int main() {
             if(BackS.getGlobalBounds().contains(m) || SettingsBack.getGlobalBounds().contains(m)) hovering = true;
             if(ModeIcon.getGlobalBounds().contains(m) || btnColor.getGlobalBounds().contains(m)) hovering = true;
             if(BatchS.getGlobalBounds().contains(m) || btnBatch.getGlobalBounds().contains(m)) hovering = true;
+            if(logoS.getGlobalBounds().contains(m) || btnCliMode.getGlobalBounds().contains(m)) hovering = true;
         } else if(currentScreen == Screen::BatchMenu) {
             if(BackS.getGlobalBounds().contains(m) || BatchBack.getGlobalBounds().contains(m)) hovering = true;
             if(IconCacheS.getGlobalBounds().contains(m) || IconCacheEdit.getGlobalBounds().contains(m)) hovering = true;
@@ -254,6 +327,10 @@ int main() {
                         DwmSetWindowAttribute(window.getSystemHandle(), 20, &useDark, sizeof(useDark));
                     }
                     if(BatchS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y}) || btnBatch.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) currentScreen = Screen::BatchMenu;
+                    if(logoS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y}) || btnCliMode.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) {
+                        system("start \"\" toolz.exe cli");
+                        return 0;
+                    }
                 } else if(currentScreen == Screen::BatchMenu) {
                     if(BackS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y}) || BatchBack.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) currentScreen = Screen::SettingsMenu;
                     if(IconCacheS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y}) || IconCacheEdit.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) system("start notepad batch\\IconCache.bat");
@@ -311,6 +388,8 @@ int main() {
             btnColor.setCharacterSize(24); btnColor.setPosition({30.f, 105.f}); window.draw(btnColor);
             BatchS.setPosition({0.f, 140.f}); window.draw(BatchS);
             btnBatch.setCharacterSize(24); btnBatch.setPosition({30.f, 135.f}); window.draw(btnBatch);
+            logoS.setScale({0.04f, 0.04f}); logoS.setPosition({0.f, 170.f}); window.draw(logoS);
+            btnCliMode.setCharacterSize(24); btnCliMode.setPosition({30.f, 165.f}); window.draw(btnCliMode);
         } else if(currentScreen == Screen::BatchMenu) {
             BatchTitle.setCharacterSize(50); BatchTitle.setPosition({0.f, 0.f}); window.draw(BatchTitle);
             BackS.setPosition({0.f, 80.f}); window.draw(BackS);
@@ -329,4 +408,194 @@ int main() {
         window.display();
     }
     return 0;
+}
+
+int RunCLI(int argc, char** argv) {
+    std::string mode = LoadColorMode();
+    if(mode == "Dark") {
+        system("color 0F");
+    }
+    else if(mode == "Light") {
+        system("color F0");
+    }
+    else {
+        if(GetSystemColorMode()) {
+            system("color 0F");
+        } else {
+            system("color F0");
+        }
+    }
+    UpdateCliTheme();
+    //MENU OPTIONS
+    std::vector<std::string> MainMenuOptions = {
+        "Clear Icon Cache",
+        "Find missing system files",
+        "Settings",
+        "About"
+    };
+    std::vector<std::string> SettingsOptions = {
+        "Back",
+        "Mode = Unknown",
+        "Edit Batch Files",
+        "Switch to GUI"
+    };
+    std::vector<std::string> BatchOptions = {
+        "Back",
+        "Clear Icon Cache",
+        "Find missing system files"
+    };
+    int selected = 0;
+    int key;
+    bool settingsOpen = false;
+    system("title Windows Toolz CLI"); 
+    while(true) {
+        while(!settingsOpen) {
+            drawMenu(MainMenuOptions, selected);
+            key = _getch();
+            if(key == 72) {
+                selected--;
+                if (selected < 0) selected = MainMenuOptions.size() - 1;
+            }
+            if(key == 80) {
+                selected++;
+                if (selected >= MainMenuOptions.size()) selected = 0;
+            }
+            if(key == 13) {
+                break;
+            }
+        }
+        if(!settingsOpen) {
+            switch(selected) {
+                case 0:
+                    system("start \"\" batch\\IconCache.bat");
+                    break;
+                case 1:
+                    ShellExecuteA(NULL, "runas", "batch\\SystemFix.bat", NULL, NULL, SW_SHOW);
+                    break;
+                case 2:
+                    settingsOpen = true;
+                    selected = 0; 
+                    break;
+                case 3:
+                    MessageBoxA(NULL, "Windows Toolz\nVersion: 0.1.0-beta", "About", MB_ICONINFORMATION);
+                    break;
+            }
+        }
+        while(settingsOpen) {
+            if(mode == "Dark") {
+                SettingsOptions[1] = "Mode = Dark";
+            } else if(mode == "Light") {
+                    SettingsOptions[1] = "Mode = Light";
+            } else {
+                SettingsOptions[1] = "Mode = System";
+            }
+            drawSettings(SettingsOptions, selected);
+            key = _getch();
+            if(key == 72) {
+                selected --;
+                if(selected < 0) selected = SettingsOptions.size() - 1;
+            }
+            if(key == 80) {
+                selected++;
+                if(selected >= SettingsOptions.size()) selected = 0;
+            }
+            if(key == 13) {
+                break;
+            }
+        }
+        if(settingsOpen) {
+            switch(selected) {
+                case 0:
+                    settingsOpen = false; 
+                    break;
+                case 1: 
+                    if(mode == "Light") {
+                        mode = "Dark";
+                        SaveColorMode("Dark");
+                        system("color 0F");
+                    } else if(mode == "Dark") {
+                        mode = "SystemDefault";
+                        SaveColorMode("SystemDefault");
+                        if(GetSystemColorMode()) {
+                            system("color 0F");
+                        } else {
+                            system("color F0");
+                        }
+                    } else {
+                        mode = "Light";
+                        SaveColorMode("Light");
+                        system("color F0");
+                    }
+                    UpdateCliTheme();
+                    break;
+                case 2: {
+                    int batchSelected = 0;
+                    bool batchOpen = true;
+                    while(batchOpen) {
+                        drawBatchSettings(BatchOptions, batchSelected);
+                        key = _getch();
+                        if(key == 72) {
+                            batchSelected--;
+                            if(batchSelected < 0) batchSelected = BatchOptions.size() - 1;
+                        }
+                        if(key == 80) {
+                            batchSelected++;
+                            if(batchSelected >= BatchOptions.size()) batchSelected = 0;
+                        }
+                        if(key == 13) {
+                            switch(batchSelected) {
+                                case 0:
+                                    batchOpen = false;
+                                    break;
+                                case 1:
+                                    system("start notepad batch\\IconCache.bat");
+                                    break;
+                                case 2:
+                                    system("start notepad batch\\SystemFix.bat");
+                                    break;
+                            }
+                        }
+                    }
+                    selected = 2;
+                    break;
+                }
+                case 3:
+                    ShellExecuteA(NULL, "open", "toolz.exe", NULL, NULL, SW_SHOW);
+                    FreeConsole();
+                    ExitProcess(0);
+            }
+                }
+    }
+    return 0;
+}
+
+int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR lpCmdLine, int) {
+    if(!lpCmdLine || strlen(lpCmdLine) == 0) {
+        return RunGUI();
+    }
+    int argc = 0;
+    char* argv[16];
+    char* token = strtok(lpCmdLine, " ");
+    while(token && argc < 16) {
+        argv[argc++] = token;
+        token = strtok(NULL, " ");
+    }
+    std::string cmd = argv[0];
+    if(cmd == "cli") {
+        AllocConsole();
+        freopen("CONOUT$", "w", stdout);
+        freopen("CONIN$", "r", stdin);
+        return RunCLI(argc, argv);
+    }
+    if(cmd == "clear-icon-cache") {
+        system("start \"\" batch\\IconCache.bat");
+        return 0;
+    }
+    if(cmd == "fix-system") {
+        ShellExecuteA(NULL, "runas", "batch\\SystemFix.bat", NULL, NULL, SW_SHOW);
+        return 0;
+    }
+    std::string msg = "Unknown argument: " + cmd;
+    MessageBoxA(NULL, msg.c_str(), "Windows Toolz", MB_ICONERROR);
+    return -1;
 }

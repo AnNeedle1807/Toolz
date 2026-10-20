@@ -1,9 +1,8 @@
-New in v0.0.3-alpha: 
-- Icons instead of arrows
-- Now the windows title bar changes color depending on the apps color mode
-- Downgraded from SFML 3.1.0 to 2.6.1 to make the changing title bar work
-- Sorted out the code to increase readability
-- Now the cursor changes whenever you are hovering over a button
-
-Updated existing things: 
-- Added a title to the Settings menu
+New in v0.1.0-beta: 
+- CLI Mode
+    - If the GUI version won't work for you, you can use the CLI, which is basically the same as the GUI, but in text. You can navigate using arrows.
+    - To enter CLI mode, just enter any terminal, like PS or CMD, and type in "toolz cli", or just go to the Settings in GUI mode to enter the CLI mode.
+    - CLI mode also supports Dark/Light modes, and it also synchronizes with GUI mode.
+    - Also added new arguments, like "clear-icon-cache", or "fix-system", so you can acces these options straight from the command prompt.
+Updated existing things:
+- Updated the icon, so it would not look basic and like the wrench emoji (🔧)
