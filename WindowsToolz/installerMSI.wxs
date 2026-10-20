@@ -4,7 +4,7 @@
         Id="*"
         Name="Windows Toolz"
         Manufacturer="AnNeedle"
-        Version="0.0.2"
+        Version="0.0.3"
         UpgradeCode="a19542dada294ce798526125d11736d7"
         Language="1045">
         <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine"/>
@@ -43,9 +43,9 @@
                         <File Source="toolz.exe"/>
                     </Component>
                     <Component Id="DLLs" Guid="b8cccb52cc494675ad9b8d60cd495bd6">
-                        <File Source="sfml-graphics-3.dll"/>
-                        <File Source="sfml-system-3.dll"/>
-                        <File Source="sfml-window-3.dll"/>
+                        <File Source="sfml-graphics-2.dll"/>
+                        <File Source="sfml-system-2.dll"/>
+                        <File Source="sfml-window-2.dll"/>
                     </Component>
                     <Directory Id="BatchFolder" Name="batch">
                         <Component Id="BatchFiles" Guid="332beb7c130c4dfba4c4b38113ba98b2">
@@ -62,7 +62,16 @@
                         </Directory>
                         <Directory Id="ImagesFolder" Name="images">
                             <Component Id="ImageFiles" Guid="5cdcf5d690bf423a8d596c78d401cf69">
+                                <File Source="assets\images\About.png"/>
+                                <File Source="assets\images\Arrow.png"/>
+                                <File Source="assets\images\Batch.png"/>
+                                <File Source="assets\images\Dark.png"/>
                                 <File Source="assets\images\icon.png"/>
+                                <File Source="assets\images\IconCache.png"/>
+                                <File Source="assets\images\Light.png"/>
+                                <File Source="assets\images\Settings.png"/>
+                                <File Source="assets\images\SystemFix.png"/>
+                                <File Source="assets\images\Unknown.png"/>
                             </Component>
                         </Directory>
                     </Directory>

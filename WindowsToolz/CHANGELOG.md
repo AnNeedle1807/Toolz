@@ -1,8 +1,9 @@
-New in v0.0.2-alpha: 
-- Added an option to edit batch files
-- Added an animation when changing color modes
-- Added a new function "Find missing Windows Files"
-- Added an "About" menu
+New in v0.0.3-alpha: 
+- Icons instead of arrows
+- Now the windows title bar changes color depending on the apps color mode
+- Downgraded from SFML 3.1.0 to 2.6.1 to make the changing title bar work
+- Sorted out the code to increase readability
+- Now the cursor changes whenever you are hovering over a button
 
 Updated existing things: 
-- Optimized changing in between modes
+- Added a title to the Settings menu
