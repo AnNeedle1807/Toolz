@@ -4,7 +4,7 @@
         Id="*"
         Name="Windows Toolz"
         Manufacturer="AnNeedle"
-        Version="0.1.0"
+        Version="0.1.1"
         UpgradeCode="a19542dada294ce798526125d11736d7"
         Language="1045">
         <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine"/>
@@ -66,6 +66,7 @@
                                 <File Source="assets\images\Arrow.png"/>
                                 <File Source="assets\images\Batch.png"/>
                                 <File Source="assets\images\Dark.png"/>
+                                <File Source="assets\images\Github.png"/>
                                 <File Source="assets\images\icon.png"/>
                                 <File Source="assets\images\IconCache.png"/>
                                 <File Source="assets\images\Light.png"/>

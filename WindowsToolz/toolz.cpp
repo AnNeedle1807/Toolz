@@ -93,6 +93,7 @@ void drawMenu(const std::vector<std::string>& MainMenuOptions, int selected) {
     std::cout << "   \\ \\/  \\/ / | | '_ \\ / _` |/ _ \\ \\ /\\ / / __|    | |/ _ \\ / _ \\| |_  /\n";
     std::cout << "    \\  /\\  /  | | | | | (_| | (_) \\ V  V /\\__ \\    | | (_) | (_) | |/ /\n";
     std::cout << "     \\/  \\/   |_|_| |_|\\__,_|\\___/ \\_/\\_/ |___/    |_|\\___/ \\___/|_/___|\n\n";
+    std::cout << "----------\n";
     for(int i = 0; i < MainMenuOptions.size(); i++) {
         if(i == selected) {
             std::cout << " > " << MainMenuOptions[i] << " <\n";
@@ -100,11 +101,14 @@ void drawMenu(const std::vector<std::string>& MainMenuOptions, int selected) {
             std::cout << "   " << MainMenuOptions[i] << "\n";
         }
     }
+    std::cout << "----------\n";
+    std::cout << "↓/↑ Go Up/Down | ENTER - Confirm";
 }
 
 void drawSettings(const std::vector<std::string>& SettingsOptions, int selected) {
     system("cls");
     std::cout << "SETTINGS\n\n";
+    std::cout << "----------\n";
     for(int i = 0; i < SettingsOptions.size(); i++) {
         if(i == selected) {
             std::cout << " > " << SettingsOptions[i] << " <\n";
@@ -112,11 +116,14 @@ void drawSettings(const std::vector<std::string>& SettingsOptions, int selected)
             std::cout << "   " << SettingsOptions[i] << "\n";
         }
     }
+    std::cout << "----------\n";
+    std::cout << "↓/↑ Go Up/Down | ENTER - Confirm";
 }
 
 void drawBatchSettings(const std::vector<std::string>& BatchOptions, int selected) {
     system("cls");
     std::cout << "EDIT BATCH FILES\n\n";
+    std::cout << "----------\n";
     for(int i = 0; i < BatchOptions.size(); i++) {
         if(i == selected) {
             std::cout << " > " << BatchOptions[i] << " <\n";
@@ -124,6 +131,8 @@ void drawBatchSettings(const std::vector<std::string>& BatchOptions, int selecte
             std::cout << "   " << BatchOptions[i] << "\n";
         }
     }
+    std::cout << "----------\n";
+    std::cout << "↓/↑ Go Up/Down | ENTER - Confirm";
 }
 
 void UpdateCliTheme() {
@@ -192,6 +201,15 @@ int RunGUI() {
     }
     HCURSOR hand = LoadCursor(NULL, IDC_HAND);
     HCURSOR arrow = LoadCursor(NULL, IDC_ARROW);
+    int selectedMain = 0;
+    int selectedSettings = 0;
+    int selectedBatch = 0;
+    int selectedAbout = 0;
+    int selected = 0;
+    //SELECTOR
+    sf::RectangleShape selector;
+    selector.setSize(sf::Vector2f(400.f, 25.f));
+    selector.setFillColor(darkMode ? sf::Color::White : sf::Color::Black);
     //FONTS
     sf::Font font; if(!font.loadFromFile("assets\\fonts\\Roboto.ttf")) return -1;
     sf::Font titleF; if(!titleF.loadFromFile("assets\\fonts\\Oswald.ttf")) return -1;
@@ -205,6 +223,7 @@ int RunGUI() {
     sf::Texture SystemFixT; if(!SystemFixT.loadFromFile("assets\\images\\SystemFix.png")) return -1;
     sf::Texture SettingsT; if(!SettingsT.loadFromFile("assets\\images\\Settings.png")) return -1;
     sf::Texture AboutT; if(!AboutT.loadFromFile("assets\\images\\About.png")) return -1;
+    sf::Texture GitHubT; if(!GitHubT.loadFromFile("assets\\images\\Github.png")) return -1;
     sf::Texture BatchT; if(!BatchT.loadFromFile("assets\\images\\Batch.png")) return -1;
     //MAIN-MENU SPRITES
     sf::Sprite BackS(BackT);
@@ -213,6 +232,7 @@ int RunGUI() {
     sf::Sprite SystemFixS(SystemFixT);
     sf::Sprite SettingsS(SettingsT);
     sf::Sprite AboutS(AboutT);
+    sf::Sprite GithubS(GitHubT);
     //SETTINGS SPRITES
     sf::Sprite ModeIcon(UnknownT);
     sf::Sprite BatchS(BatchT);
@@ -237,8 +257,9 @@ int RunGUI() {
     //ABOUT TEXTS
     sf::Text AboutTitle("About Windows Toolz", font);
     sf::Text AboutBack("Back", font);
+    sf::Text AboutGithub("Check this program's GitHub Page", font);
     sf::Text AboutAuthor("Author: AnNeedle", font);
-    sf::Text AboutVersion("Version: 0.1.0-beta", font);
+    sf::Text AboutVersion("Version: 0.1.1-beta", font);
     std::vector<sf::Text*> texts = {
         &titleT,
         &btnSettings,
@@ -256,6 +277,7 @@ int RunGUI() {
         &btnAbout,
         &AboutTitle,
         &AboutBack,
+        &AboutGithub,
         &AboutAuthor,
         &AboutVersion
     };
@@ -264,26 +286,67 @@ int RunGUI() {
         auto mouse = sf::Mouse::getPosition(window);
         sf::Vector2f m((float)mouse.x, (float)mouse.y);
         if(currentScreen == Screen::MainMenu) {
-            if(IconCacheS.getGlobalBounds().contains(m) || btnIconCache.getGlobalBounds().contains(m)) hovering = true;
-            if(SystemFixS.getGlobalBounds().contains(m) || btnSystemFix.getGlobalBounds().contains(m)) hovering = true;
-            if(SettingsS.getGlobalBounds().contains(m) || btnSettings.getGlobalBounds().contains(m)) hovering = true;
-            if(AboutS.getGlobalBounds().contains(m) || btnAbout.getGlobalBounds().contains(m)) hovering = true;
+            if(IconCacheS.getGlobalBounds().contains(m) || btnIconCache.getGlobalBounds().contains(m)) {
+                hovering = true;
+                selectedMain = 0;
+            }
+            if(SystemFixS.getGlobalBounds().contains(m) || btnSystemFix.getGlobalBounds().contains(m)) {
+                hovering = true;
+                selectedMain = 1;
+            }
+            if(SettingsS.getGlobalBounds().contains(m) || btnSettings.getGlobalBounds().contains(m)) {
+                hovering = true;
+                selectedMain = 2;
+            }
+            if(AboutS.getGlobalBounds().contains(m) || btnAbout.getGlobalBounds().contains(m)) {
+                hovering = true;
+                selectedMain = 3;
+            }
         } else if(currentScreen == Screen::SettingsMenu) {
-            if(BackS.getGlobalBounds().contains(m) || SettingsBack.getGlobalBounds().contains(m)) hovering = true;
-            if(ModeIcon.getGlobalBounds().contains(m) || btnColor.getGlobalBounds().contains(m)) hovering = true;
-            if(BatchS.getGlobalBounds().contains(m) || btnBatch.getGlobalBounds().contains(m)) hovering = true;
-            if(logoS.getGlobalBounds().contains(m) || btnCliMode.getGlobalBounds().contains(m)) hovering = true;
+            if(BackS.getGlobalBounds().contains(m) || SettingsBack.getGlobalBounds().contains(m)) {
+                hovering = true;
+                selectedSettings = 0;
+            }
+            if(ModeIcon.getGlobalBounds().contains(m) || btnColor.getGlobalBounds().contains(m)) {
+                hovering = true;
+                selectedSettings = 1;
+            }
+            if(BatchS.getGlobalBounds().contains(m) || btnBatch.getGlobalBounds().contains(m)) {
+                hovering = true;
+                selectedSettings = 2;
+            }
+            if(logoS.getGlobalBounds().contains(m) || btnCliMode.getGlobalBounds().contains(m)) {
+                hovering = true;
+                selectedSettings = 3;
+            }
         } else if(currentScreen == Screen::BatchMenu) {
-            if(BackS.getGlobalBounds().contains(m) || BatchBack.getGlobalBounds().contains(m)) hovering = true;
-            if(IconCacheS.getGlobalBounds().contains(m) || IconCacheEdit.getGlobalBounds().contains(m)) hovering = true;
-            if(SystemFixS.getGlobalBounds().contains(m) || SystemFixEdit.getGlobalBounds().contains(m)) hovering = true;
+            if(BackS.getGlobalBounds().contains(m) || BatchBack.getGlobalBounds().contains(m)) {
+                hovering = true;
+                selectedBatch = 0;
+            }
+            if(IconCacheS.getGlobalBounds().contains(m) || IconCacheEdit.getGlobalBounds().contains(m)) {
+                hovering = true;
+                selectedBatch = 1;
+            }
+            if(SystemFixS.getGlobalBounds().contains(m) || SystemFixEdit.getGlobalBounds().contains(m)) {
+                hovering = true;
+                selectedBatch = 2;
+            }
         } else if(currentScreen == Screen::AboutMenu) {
-            if(BackS.getGlobalBounds().contains(m) || AboutBack.getGlobalBounds().contains(m)) hovering = true;
+            if(BackS.getGlobalBounds().contains(m) || AboutBack.getGlobalBounds().contains(m)) {
+                hovering = true;
+                selectedAbout = 0;
+            }
+            if(GithubS.getGlobalBounds().contains(m) || AboutGithub.getGlobalBounds().contains(m)) {
+                hovering = true;
+                selectedAbout = 1;
+            }
         }
-        if(hovering)
+        if(hovering) {
             SetClassLongPtr(hwnd, GCLP_HCURSOR, (LONG_PTR)hand);
-        else
+        } else {
             SetClassLongPtr(hwnd, GCLP_HCURSOR, (LONG_PTR)arrow);
+        }
         sf::Event event;
         while(window.pollEvent(event)) {
             if(event.type == sf::Event::Closed) window.close();
@@ -303,6 +366,7 @@ int RunGUI() {
                             SaveColorMode("Dark");
                             btnColor.setString("Mode: Dark");
                             darkMode = true;
+                            selector.setFillColor(sf::Color::White);
                             targetBg = sf::Color::Black;
                             animClock.restart();
                             animating = true;
@@ -312,6 +376,7 @@ int RunGUI() {
                             btnColor.setString("Mode: System");
                             darkMode = GetSystemColorMode();
                             targetBg = darkMode ? sf::Color::Black : sf::Color::White;
+                            selector.setFillColor(darkMode ? sf::Color::White : sf::Color::Black);
                             animClock.restart();
                             animating = true;
                         } else {
@@ -320,6 +385,7 @@ int RunGUI() {
                             btnColor.setString("Mode: Light");
                             darkMode = false;
                             targetBg = sf::Color::White;
+                            selector.setFillColor(sf::Color::Black);
                             animClock.restart();
                             animating = true;
                         }
@@ -337,12 +403,154 @@ int RunGUI() {
                     if(SystemFixS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y}) || SystemFixEdit.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) system("start notepad batch\\SystemFix.bat");
                 } else if(currentScreen == Screen::AboutMenu) {
                     if(BackS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y}) || AboutBack.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) currentScreen = Screen::MainMenu;
+                    if(GithubS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y}) || AboutGithub.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) system("start \"\" https://github.com/GlasgowCpp/WindowsToolz");
+                }
+            }
+            if(event.type == sf::Event::KeyPressed) {
+                if(currentScreen == Screen::MainMenu) {
+                    if(event.key.code == sf::Keyboard::Down) {
+                        selectedMain++;
+                        if(selectedMain > 3) {
+                            selectedMain = 0;
+                        }
+                    }
+                    if(event.key.code == sf::Keyboard::Up) {
+                        selectedMain--;
+                        if(selectedMain < 0) {
+                            selectedMain = 3;
+                        }
+                    }
+                    if(event.key.code == sf::Keyboard::Enter) {
+                        switch(selectedMain) {
+                            case 0:
+                                system("start \"\" batch\\IconCache.bat");
+                                break;
+                            case 1:
+                                ShellExecuteA(NULL, "runas", "batch\\SystemFix.bat", NULL, NULL, SW_SHOW);
+                                break;
+                            case 2:
+                                currentScreen = Screen::SettingsMenu;
+                                break;
+                            case 3:
+                                currentScreen = Screen::AboutMenu;
+                                break;
+                        }
+                    }
+                } else if(currentScreen == Screen::SettingsMenu) {
+                    if(event.key.code == sf::Keyboard::Down) {
+                        selectedSettings++;
+                        if(selectedSettings > 3) {
+                            selectedSettings = 0;
+                        }
+                    }
+                    if(event.key.code == sf::Keyboard::Up) {
+                        selectedSettings--;
+                        if(selectedSettings < 0) {
+                            selectedSettings = 3;
+                        }
+                    }
+                    if(event.key.code == sf::Keyboard::Enter) {
+                        switch(selectedSettings) {
+                            case 0:
+                                currentScreen = Screen::MainMenu;
+                                break;
+                            case 1: {
+                                if(mode == "Light") {
+                                    mode = "Dark";
+                                    SaveColorMode("Dark");
+                                    btnColor.setString("Mode: Dark");
+                                    darkMode = true;
+                                    selector.setFillColor(sf::Color::White);
+                                    targetBg = sf::Color::Black;
+                                    animClock.restart();
+                                    animating = true;
+                                } else if (mode == "Dark") {
+                                    mode = "SystemDefault";
+                                    SaveColorMode("SystemDefault");
+                                    btnColor.setString("Mode: System");
+                                    darkMode = GetSystemColorMode();
+                                    targetBg = darkMode ? sf::Color::Black : sf::Color::White;
+                                    selector.setFillColor(darkMode ? sf::Color::White : sf::Color::Black);
+                                    animClock.restart();
+                                    animating = true;
+                                } else {
+                                    mode = "Light";
+                                    SaveColorMode("Light");
+                                    btnColor.setString("Mode: Light");
+                                    darkMode = false;
+                                    targetBg = sf::Color::White;
+                                    selector.setFillColor(sf::Color::Black);
+                                    animClock.restart();
+                                    animating = true;
+                                }
+                                BOOL useDark = darkMode ? TRUE : FALSE;
+                                DwmSetWindowAttribute(window.getSystemHandle(), 20, &useDark, sizeof(useDark));
+                                break;
+                            }
+                            case 2:
+                                currentScreen = Screen::BatchMenu;
+                                break;
+                            case 3:
+                                system("start \"\" toolz.exe cli");
+                                return 0;
+                                break;
+                        }
+                    }
+                } else if(currentScreen == Screen::BatchMenu) {
+                    if(event.key.code == sf::Keyboard::Down) {
+                        selectedBatch++;
+                        if(selectedBatch > 2) {
+                            selectedBatch = 0;
+                        }
+                    }
+                    if(event.key.code == sf::Keyboard::Up) {
+                        selectedBatch--;
+                        if(selectedBatch < 0) {
+                            selectedBatch = 2;
+                        }
+                    }
+                    if(event.key.code == sf::Keyboard::Enter) {
+                        switch(selectedBatch) {
+                            case 0:
+                                currentScreen = Screen::SettingsMenu;
+                                break;
+                            case 1:
+                                system("start notepad batch\\IconCache.bat");
+                                break;
+                            case 2:
+                                system("start notepad batch\\SystemFix.bat");
+                                break;
+                        }
+                    }
+                } else if(currentScreen == Screen::AboutMenu) {
+                    if(event.key.code == sf::Keyboard::Down) {
+                        selectedAbout++;
+                        if(selectedAbout > 1) {
+                            selectedAbout = 0;
+                        }
+                    }
+                    if(event.key.code == sf::Keyboard::Up) {
+                        selectedAbout--;
+                        if(selectedAbout < 0) {
+                            selectedAbout = 1;
+                        }
+                    }
+                    if(event.key.code == sf::Keyboard::Enter) {
+                        switch(selectedAbout) {
+                            case 0:
+                                currentScreen = Screen::MainMenu;
+                                break;
+                            case 1:
+                                system("start \"\" https://github.com/AnNeedle1807/Toolz");
+                                break;
+                        }
+                    }
                 }
             }
         }
         //COLOR SWITCHING ANIMATION
         if(animating) {
-            float t = animClock.getElapsedTime().asSeconds() / 10.f;
+            float t = animClock.getElapsedTime().asSeconds() / 1.f;
             if(t >= 1.f) {
                 t = 1.f;
                 animating = false;
@@ -359,8 +567,62 @@ int RunGUI() {
         window.clear(currentBg);
         sf::Color textColor = darkMode ? sf::Color::White : sf::Color::Black;
         for (auto t : texts) t->setFillColor(textColor);
+        sf::Color selectedTextColor = darkMode ? sf::Color::Black : sf::Color::White;
+        if(currentScreen == Screen::MainMenu) {
+            switch(selectedMain) {
+                case 0:
+                    btnIconCache.setFillColor(selectedTextColor);
+                    break;
+                case 1:
+                    btnSystemFix.setFillColor(selectedTextColor);
+                    break;
+                case 2:
+                    btnSettings.setFillColor(selectedTextColor);
+                    break;
+                case 3:
+                    btnAbout.setFillColor(selectedTextColor);
+                    break;
+            }
+        } else if(currentScreen == Screen::SettingsMenu) {
+            switch(selectedSettings) {
+                case 0:
+                    SettingsBack.setFillColor(selectedTextColor);
+                    break;
+                case 1:
+                    btnColor.setFillColor(selectedTextColor);
+                    break;
+                case 2:
+                    btnBatch.setFillColor(selectedTextColor);
+                    break;
+                case 3:
+                    btnCliMode.setFillColor(selectedTextColor);
+                    break;
+            }
+        } else if(currentScreen == Screen::BatchMenu) {
+            switch(selectedBatch) {
+                case 0:
+                    BatchBack.setFillColor(selectedTextColor);
+                    break;
+                case 1:
+                    IconCacheEdit.setFillColor(selectedTextColor);
+                    break;
+                case 2:
+                    SystemFixEdit.setFillColor(selectedTextColor);
+                    break;
+            }
+        } else if(currentScreen == Screen::AboutMenu) {
+            switch(selectedAbout) {
+                case 0:
+                    AboutBack.setFillColor(selectedTextColor);
+                    break;
+                case 1:
+                    AboutGithub.setFillColor(selectedTextColor);
+                    break;
+            }
+        }
         //WINDOW CONTENTS RENDERING
         if(currentScreen == Screen::MainMenu) {
+            selector.setPosition({0.f, 127.5f + selectedMain * 30.f}); window.draw(selector);
             logoS.setScale({0.25f, 0.25f}); logoS.setPosition({0.f, 0.f}); window.draw(logoS);
             titleT.setPosition({125.f, 0.f}); titleT.setCharacterSize(110); window.draw(titleT);
             IconCacheS.setPosition({0.f, 130.f}); window.draw(IconCacheS);
@@ -372,6 +634,7 @@ int RunGUI() {
             AboutS.setPosition({0.f, 220.f}); window.draw(AboutS);
             btnAbout.setCharacterSize(24); btnAbout.setPosition({30.f, 215.f}); window.draw(btnAbout);
         } else if(currentScreen == Screen::SettingsMenu) {
+            selector.setPosition({0.f, 77.5f + selectedSettings * 30.f}); window.draw(selector);
             SettingsTitle.setCharacterSize(50); SettingsTitle.setPosition({0.f, 0.f}); window.draw(SettingsTitle);
             BackS.setPosition({0.f, 80.f}); window.draw(BackS);
             SettingsBack.setCharacterSize(24); SettingsBack.setPosition({30.f, 75.f}); window.draw(SettingsBack);
@@ -379,8 +642,11 @@ int RunGUI() {
             if(mode == "Light") ModeIcon.setTexture(Sun);
             else if(mode == "Dark") ModeIcon.setTexture(Moon);
             else {
-                if(darkMode) ModeIcon.setTexture(Moon);
-                else ModeIcon.setTexture(Sun);
+                if(darkMode) {
+                    ModeIcon.setTexture(Moon);
+                } else {
+                    ModeIcon.setTexture(Sun);
+                }
             }
             if(mode == "Dark") btnColor.setString("Mode: Dark");
             else if(mode == "Light") btnColor.setString("Mode: Light");
@@ -391,6 +657,7 @@ int RunGUI() {
             logoS.setScale({0.04f, 0.04f}); logoS.setPosition({0.f, 170.f}); window.draw(logoS);
             btnCliMode.setCharacterSize(24); btnCliMode.setPosition({30.f, 165.f}); window.draw(btnCliMode);
         } else if(currentScreen == Screen::BatchMenu) {
+            selector.setPosition({0.f, 77.5f + selectedBatch * 30.f}); window.draw(selector);
             BatchTitle.setCharacterSize(50); BatchTitle.setPosition({0.f, 0.f}); window.draw(BatchTitle);
             BackS.setPosition({0.f, 80.f}); window.draw(BackS);
             BatchBack.setCharacterSize(24); BatchBack.setPosition({30.f, 75.f}); window.draw(BatchBack);
@@ -399,11 +666,14 @@ int RunGUI() {
             SystemFixS.setPosition({0.f, 140.f}); window.draw(SystemFixS);
             SystemFixEdit.setCharacterSize(24);SystemFixEdit.setPosition({30.f, 135.f}); window.draw(SystemFixEdit);
         } else if(currentScreen == Screen::AboutMenu) {
+            selector.setPosition({0.f, 77.5f + selectedAbout * 30.f}); window.draw(selector);
             AboutTitle.setCharacterSize(50); AboutTitle.setPosition({0.f, 0.f}); window.draw(AboutTitle);
             BackS.setPosition({0.f, 80.f}); window.draw(BackS);
             AboutBack.setCharacterSize(24); AboutBack.setPosition({30.f, 75.f}); window.draw(AboutBack);
-            AboutAuthor.setCharacterSize(24); AboutAuthor.setPosition({0.f, 105.f}); window.draw(AboutAuthor);
-            AboutVersion.setCharacterSize(24); AboutVersion.setPosition({0.f, 135.f}); window.draw(AboutVersion);
+            GithubS.setPosition({0.f, 110.f}); window.draw(GithubS);
+            AboutGithub.setCharacterSize(24); AboutGithub.setPosition({30.f, 105.f}); window.draw(AboutGithub);
+            AboutAuthor.setCharacterSize(24); AboutAuthor.setPosition({0.f, 135.f}); window.draw(AboutAuthor);
+            AboutVersion.setCharacterSize(24); AboutVersion.setPosition({0.f, 165.f}); window.draw(AboutVersion);
         }
         window.display();
     }
@@ -477,7 +747,7 @@ int RunCLI(int argc, char** argv) {
                     selected = 0; 
                     break;
                 case 3:
-                    MessageBoxA(NULL, "Windows Toolz\nVersion: 0.1.0-beta", "About", MB_ICONINFORMATION);
+                    MessageBoxA(NULL, "Windows Toolz\nVersion: 0.1.1-beta", "About", MB_ICONINFORMATION);
                     break;
             }
         }
@@ -564,7 +834,7 @@ int RunCLI(int argc, char** argv) {
                     FreeConsole();
                     ExitProcess(0);
             }
-                }
+        }
     }
     return 0;
 }
@@ -585,6 +855,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR lpCmdLine, int) {
         AllocConsole();
         freopen("CONOUT$", "w", stdout);
         freopen("CONIN$", "r", stdin);
+        SetConsoleOutputCP(CP_UTF8);
+        SetConsoleCP(CP_UTF8);
         return RunCLI(argc, argv);
     }
     if(cmd == "clear-icon-cache") {
