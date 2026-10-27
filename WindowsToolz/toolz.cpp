@@ -6,8 +6,6 @@
 #include <dwmapi.h>
 #include <conio.h>
 
-WNDPROC originalProc = nullptr;
-
 enum class Screen {
     MainMenu,
     SettingsMenu,
@@ -25,7 +23,8 @@ bool GetSystemColorMode() {
         0,
         KEY_READ,
         &hKey
-    ) == ERROR_SUCCESS) {
+    ) == ERROR_SUCCESS)
+    {
         RegGetValueA(
             hKey,
             NULL,
@@ -163,26 +162,6 @@ void UpdateCliTheme() {
     );
 }
 
-LRESULT CALLBACK CustomWndProc(
-    HWND hwnd,
-    UINT msg,
-    WPARAM wParam,
-    LPARAM lParam) {
-    if(msg == WM_GETMINMAXINFO) {
-        MINMAXINFO* mmi = reinterpret_cast<MINMAXINFO*>(lParam);
-        mmi->ptMinTrackSize.x = 1280;
-        mmi->ptMinTrackSize.y = 720;
-        return 0;
-    }
-    return CallWindowProc(
-        originalProc,
-        hwnd,
-        msg,
-        wParam,
-        lParam
-    );
-}
-
 int RunGUI() {
     char path[MAX_PATH];
     GetModuleFileNameA(NULL, path, MAX_PATH);
@@ -202,24 +181,16 @@ int RunGUI() {
     sf::Color targetBg = currentBg;
     bool animating = false;
     sf::Clock animClock;
-    sf::RenderWindow window(sf::VideoMode({1280, 720}), "Windows Toolz", sf::Style::Titlebar | sf::Style::Resize | sf::Style::Close);
+    sf::RenderWindow window(sf::VideoMode({1280, 720}), "Windows Toolz", sf::Style::Titlebar | sf::Style::Close);
     HWND hwnd = window.getSystemHandle();
-    originalProc = reinterpret_cast<WNDPROC>(
-        SetWindowLongPtr(
+        BOOL useDark = darkMode ? TRUE : FALSE;
+        DwmSetWindowAttribute(
             hwnd,
-            GWLP_WNDPROC,
-            reinterpret_cast<LONG_PTR>(CustomWndProc)
-        )
-    );
-    BOOL useDark = darkMode ? TRUE : FALSE;
-    DwmSetWindowAttribute(
-        hwnd,
-        20,
-        &useDark,
-        sizeof(useDark)
-    );
+            20,
+            &useDark,
+            sizeof(useDark)
+        );
     window.setView(sf::View(sf::FloatRect({0.f, 0.f}, {1280.f, 720.f})));
-    window.setVerticalSyncEnabled(true);
     sf::Image icon;
     if(icon.loadFromFile("assets\\images\\icon.png")) {
         window.setIcon(
@@ -288,7 +259,7 @@ int RunGUI() {
     sf::Text AboutBack("Back", font);
     sf::Text AboutGithub("Check this program's GitHub Page", font);
     sf::Text AboutAuthor("Author: AnNeedle", font);
-    sf::Text AboutVersion("Version: 0.2.0-beta", font);
+    sf::Text AboutVersion("Version: 0.1.1-beta", font);
     std::vector<sf::Text*> texts = {
         &titleT,
         &btnSettings,
@@ -382,7 +353,7 @@ int RunGUI() {
             if(event.type == sf::Event::MouseButtonPressed) {
                 auto mouse = sf::Mouse::getPosition(window);
                 if(currentScreen == Screen::MainMenu) {
-                    if(IconCacheS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y}) || btnIconCache.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) ShellExecuteA(NULL, "open", "batch\\IconCache.bat", NULL, NULL, SW_SHOW);
+                    if(IconCacheS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y}) || btnIconCache.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) system("start \"\" batch\\IconCache.bat");
                     if(SystemFixS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y}) || btnSystemFix.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) ShellExecuteA(NULL, "runas", "batch\\SystemFix.bat", NULL, NULL, SW_SHOW);
                     if(SettingsS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y}) || btnSettings.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) currentScreen = Screen::SettingsMenu;
                     if(AboutS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y}) || btnAbout.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) currentScreen = Screen::AboutMenu;
@@ -423,16 +394,16 @@ int RunGUI() {
                     }
                     if(BatchS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y}) || btnBatch.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) currentScreen = Screen::BatchMenu;
                     if(logoS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y}) || btnCliMode.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) {
-                        ShellExecuteA(NULL, "open", "toolz.exe", "cli", NULL, SW_SHOW);
+                        system("start \"\" toolz.exe cli");
                         return 0;
                     }
                 } else if(currentScreen == Screen::BatchMenu) {
                     if(BackS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y}) || BatchBack.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) currentScreen = Screen::SettingsMenu;
-                    if(IconCacheS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y}) || IconCacheEdit.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) ShellExecuteA(NULL, "open", "notepad", "batch\\IconCache.bat", NULL, SW_SHOW);
-                    if(SystemFixS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y}) || SystemFixEdit.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) ShellExecuteA(NULL, "open", "notepad", "batch\\SystemFix.bat", NULL, SW_SHOW);
+                    if(IconCacheS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y}) || IconCacheEdit.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) system("start notepad batch\\IconCache.bat");
+                    if(SystemFixS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y}) || SystemFixEdit.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) system("start notepad batch\\SystemFix.bat");
                 } else if(currentScreen == Screen::AboutMenu) {
                     if(BackS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y}) || AboutBack.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) currentScreen = Screen::MainMenu;
-                    if(GithubS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y}) || AboutGithub.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) ShellExecuteA(NULL, "open", "https://github.com/AnNeedle1807/Toolz", NULL, NULL, SW_SHOW);
+                    if(GithubS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y}) || AboutGithub.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) system("start \"\" https://github.com/AnNeedle1807/Toolz");
                 }
             }
             if(event.type == sf::Event::KeyPressed) {
@@ -452,7 +423,7 @@ int RunGUI() {
                     if(event.key.code == sf::Keyboard::Enter) {
                         switch(selectedMain) {
                             case 0:
-                                ShellExecuteA(NULL, "open", "batch\\IconCache.bat", NULL, NULL, SW_SHOW);
+                                system("start \"\" batch\\IconCache.bat");
                                 break;
                             case 1:
                                 ShellExecuteA(NULL, "runas", "batch\\SystemFix.bat", NULL, NULL, SW_SHOW);
@@ -520,7 +491,7 @@ int RunGUI() {
                                 currentScreen = Screen::BatchMenu;
                                 break;
                             case 3:
-                                ShellExecuteA(NULL, "open", "toolz", "cli", NULL, SW_SHOW);
+                                system("start \"\" toolz.exe cli");
                                 return 0;
                                 break;
                         }
@@ -544,10 +515,10 @@ int RunGUI() {
                                 currentScreen = Screen::SettingsMenu;
                                 break;
                             case 1:
-                                ShellExecuteA(NULL, "open", "notepad", "batch\\IconCache.bat", NULL, SW_SHOW);
+                                system("start notepad batch\\IconCache.bat");
                                 break;
                             case 2:
-                                ShellExecuteA(NULL, "open", "notepad", "batch\\SystemFix.bat", NULL, SW_SHOW);
+                                system("start notepad batch\\SystemFix.bat");
                                 break;
                         }
                     }
@@ -570,21 +541,12 @@ int RunGUI() {
                                 currentScreen = Screen::MainMenu;
                                 break;
                             case 1:
-                                ShellExecuteA(NULL, "open", "https://github.com/GlasgowCpp/WindowsToolz", NULL, NULL, SW_SHOW);
+                                system("start \"\" https://github.com/AnNeedle1807/Toolz");
                                 break;
                         }
                     }
                 }
             }
-        }
-        if(event.type == sf::Event::Resized) {
-            sf::FloatRect visibleArea(
-                0.f,
-                0.f,
-                static_cast<float>(event.size.width),
-                static_cast<float>(event.size.height)
-            );
-            window.setView(sf::View(visibleArea));
         }
         //COLOR SWITCHING ANIMATION
         if(animating) {
@@ -775,7 +737,7 @@ int RunCLI(int argc, char** argv) {
         if(!settingsOpen) {
             switch(selected) {
                 case 0:
-                    ShellExecuteA(NULL, "open", "batch\\IconCache.bat", NULL, NULL, SW_SHOW);
+                    system("start \"\" batch\\IconCache.bat");
                     break;
                 case 1:
                     ShellExecuteA(NULL, "runas", "batch\\SystemFix.bat", NULL, NULL, SW_SHOW);
@@ -785,7 +747,7 @@ int RunCLI(int argc, char** argv) {
                     selected = 0; 
                     break;
                 case 3:
-                    MessageBoxA(NULL, "Windows Toolz\nVersion: 0.2.0-beta", "About", MB_ICONINFORMATION);
+                    MessageBoxA(NULL, "Windows Toolz\nVersion: 0.1.1-beta", "About", MB_ICONINFORMATION);
                     break;
             }
         }
@@ -856,10 +818,10 @@ int RunCLI(int argc, char** argv) {
                                     batchOpen = false;
                                     break;
                                 case 1:
-                                    ShellExecuteA(NULL, "open", "notepad", "batch\\IconCache.bat", NULL, SW_SHOW);
+                                    system("start notepad batch\\IconCache.bat");
                                     break;
                                 case 2:
-                                    ShellExecuteA(NULL, "open", "notepad", "batch\\SystemFix.bat", NULL, SW_SHOW);
+                                    system("start notepad batch\\SystemFix.bat");
                                     break;
                             }
                         }
@@ -898,7 +860,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR lpCmdLine, int) {
         return RunCLI(argc, argv);
     }
     if(cmd == "clear-icon-cache") {
-        ShellExecuteA(NULL, "open", "batch\\IconCache.bat", NULL, NULL, SW_SHOW);
+        system("start \"\" batch\\IconCache.bat");
         return 0;
     }
     if(cmd == "fix-system") {
