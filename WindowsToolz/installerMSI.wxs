@@ -4,7 +4,7 @@
         Id="*"
         Name="Windows Toolz"
         Manufacturer="AnNeedle"
-        Version="0.2.0"
+        Version="0.3.0"
         UpgradeCode="a19542dada294ce798526125d11736d7"
         Language="1045">
         <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine"/>
@@ -63,8 +63,8 @@
                         <Directory Id="ImagesFolder" Name="images">
                             <Component Id="ImageFiles" Guid="5cdcf5d690bf423a8d596c78d401cf69">
                                 <File Source="assets\images\About.png"/>
-                                <File Source="assets\images\Arrow.png"/>
                                 <File Source="assets\images\Batch.png"/>
+                                <File Source="assets\images\cli.png"/>
                                 <File Source="assets\images\Dark.png"/>
                                 <File Source="assets\images\Github.png"/>
                                 <File Source="assets\images\icon.png"/>
