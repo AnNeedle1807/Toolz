@@ -6,11 +6,15 @@
 #include <dwmapi.h>
 #include <conio.h>
 #include <winhttp.h>
+#include <fstream>
+#include <filesystem>
+#include <ctime>
+#include <iomanip>
 #pragma comment(lib, "winhttp.lib")
 
 WNDPROC originalProc = nullptr;
 
-const std::string CURRENT_VERSION = "v0.3.0-beta";
+const std::string CURRENT_VERSION = "v0.4.0-beta";
 bool checkedForUpdates = false;
 
 enum class Sidebar {
@@ -18,6 +22,24 @@ enum class Sidebar {
     About,
     None
 };
+
+std::string GetLogPath() {
+    char path[MAX_PATH];
+    GetEnvironmentVariableA("LOCALAPPDATA", path, MAX_PATH);
+    return std::string(path) + "\\WindowsToolz\\logs";
+}
+
+void ClearLog() {
+    std::ofstream(GetLogPath() + "\\latest.log", std::ios::trunc).close();
+}
+
+void Log(const std::string& message) {
+    std::ofstream file(GetLogPath() + "\\latest.log", std::ios::app);
+    if(!file.is_open()) return;
+    auto now = std::time(nullptr);
+    auto local = *std::localtime(&now);
+    file << "[" << std::put_time(&local, "%H:%M:%S") << "] " << message << "\n";
+}
 
 std::string HttpGet(const std::wstring& host, const std::wstring& path) {
     std::string result;
@@ -51,23 +73,12 @@ std::string HttpGet(const std::wstring& host, const std::wstring& path) {
     if(request && WinHttpSendRequest(request, WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0) && WinHttpReceiveResponse(request, NULL)) {
         DWORD size = 0;
         do {
-            WinHttpQueryDataAvailable(
-                request,
-                &size
-            );
+            WinHttpQueryDataAvailable(request, &size);
             if(size == 0) break;
             std::vector<char> buffer(size + 1);
             DWORD downloaded = 0;
-            WinHttpReadData(
-                request,
-                buffer.data(),
-                size,
-                &downloaded
-            );
-            result.append(
-                buffer.data(),
-                downloaded
-            );
+            WinHttpReadData(request, buffer.data(), size, &downloaded);
+            result.append(buffer.data(), downloaded);
         } while(size > 0);
     }
     if(request) WinHttpCloseHandle(request);
@@ -77,6 +88,7 @@ std::string HttpGet(const std::wstring& host, const std::wstring& path) {
 }
 
 void CheckForUpdates() {
+    Log("Checking for updates");
     std::string json = HttpGet(L"api.github.com", L"/repos/AnNeedle1807/Toolz/releases/latest");
     if(json.empty()) return;
     size_t pos = json.find("\"tag_name\":\"");
@@ -85,19 +97,17 @@ void CheckForUpdates() {
     size_t end = json.find('"', pos);
     if(end == std::string::npos) return;
     std::string latestVersion = json.substr(pos, end - pos);
-    if(latestVersion == CURRENT_VERSION) return;
-    int result = MessageBoxA(
-        NULL,
-        ("Update available!\n\nCurrent version: " + CURRENT_VERSION + "\nLatest version: " + latestVersion + "\n\nWould you like to open Releases?").c_str(), "Windows Toolz Update", MB_ICONINFORMATION | MB_YESNO);
+    if(latestVersion == CURRENT_VERSION) {
+        Log("No updates available");
+        return;
+    }
+    Log("Update available: " + latestVersion);
+    int result = MessageBoxA(NULL, ("Update available!\n\nCurrent version: " + CURRENT_VERSION + "\nLatest version: " + latestVersion + "\n\nWould you like to open Releases?").c_str(), "Windows Toolz Update", MB_ICONINFORMATION | MB_YESNO);
     if(result == IDYES) {
-        ShellExecuteA(
-            NULL,
-            "open",
-            "https://github.com/AnNeedle1807/Toolz/releases/latest",
-            NULL,
-            NULL,
-            SW_SHOW
-        );
+        Log("User accepted update prompt");
+        ShellExecuteA(NULL, "open", "https://github.com/AnNeedle1807/Toolz/releases/latest", NULL, NULL, SW_SHOW);
+    } else if(result == IDNO) {
+        Log("User declined update prompt");
     }
 }
 
@@ -105,22 +115,8 @@ bool GetSystemColorMode() {
     HKEY hKey;
     DWORD value = 1;
     DWORD size = sizeof(value);
-    if(RegOpenKeyExA(
-        HKEY_CURRENT_USER,
-        "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
-        0,
-        KEY_READ,
-        &hKey
-    ) == ERROR_SUCCESS) {
-        RegGetValueA(
-            hKey,
-            NULL,
-            "AppsUseLightTheme",
-            RRF_RT_REG_DWORD,
-            NULL,
-            &value,
-            &size
-        );
+    if(RegOpenKeyExA(HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize", 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
+        RegGetValueA(hKey, NULL, "AppsUseLightTheme", RRF_RT_REG_DWORD, NULL, &value, &size);
         RegCloseKey(hKey);
     }
     return value == 0;
@@ -128,19 +124,8 @@ bool GetSystemColorMode() {
 
 void SaveColorMode(const std::string& mode) {
     HKEY hKey;
-    RegCreateKeyExA(
-        HKEY_CURRENT_USER,
-        "Software\\WindowsToolz",
-        0, NULL, 0, KEY_WRITE, NULL, &hKey, NULL
-    );
-    RegSetValueExA(
-        hKey,
-        "ColorMode",
-        0,
-        REG_SZ,
-        (const BYTE*)mode.c_str(),
-        mode.size() + 1
-    );
+    RegCreateKeyExA(HKEY_CURRENT_USER, "Software\\WindowsToolz", 0, NULL, 0, KEY_WRITE, NULL, &hKey, NULL);
+    RegSetValueExA(hKey, "ColorMode", 0, REG_SZ, (const BYTE*)mode.c_str(), mode.size() + 1);
     RegCloseKey(hKey);
 }
 
@@ -154,22 +139,31 @@ std::string LoadColorMode() {
         0,
         KEY_READ,
         &hKey
-    ) == ERROR_SUCCESS)
-    {
-        RegGetValueA(
-            hKey,
-            NULL,
-            "ColorMode",
-            RRF_RT_REG_SZ,
-            NULL,
-            buffer,
-            &size
-        );
+    ) == ERROR_SUCCESS) {RegGetValueA(hKey, NULL, "ColorMode", RRF_RT_REG_SZ, NULL, buffer, &size);
         RegCloseKey(hKey);
         return buffer;
     }
     SaveColorMode("SystemDefault");
     return "SystemDefault";
+}
+
+void SaveUpdateCheck(bool enabled) {
+    HKEY hKey;
+    RegCreateKeyExA(HKEY_CURRENT_USER, "Software\\WindowsToolz", 0, NULL, 0, KEY_WRITE, NULL, &hKey, NULL);
+    DWORD value = enabled ? 1 : 0;
+    RegSetValueExA(hKey, "CheckUpdatesOnStartup", 0, REG_DWORD, (BYTE*)&value, sizeof(value));
+    RegCloseKey(hKey);
+}
+
+bool LoadUpdateCheck() {
+    HKEY hKey;
+    DWORD value = 1;
+    DWORD size = sizeof(value);
+    if(RegOpenKeyExA(HKEY_CURRENT_USER, "Software\\WindowsToolz", 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
+        RegGetValueA(hKey, NULL, "CheckUpdatesOnStartup", RRF_RT_REG_DWORD, NULL, &value, &size);
+        RegCloseKey(hKey);
+    }
+    return value != 0;
 }
 
 void drawMenu(const std::vector<std::string>& MainMenuOptions, int selected) {
@@ -275,6 +269,10 @@ int RunGUI() {
     std::string exePath(path);
     std::string dir = exePath.substr(0, exePath.find_last_of("\\/"));
     SetCurrentDirectoryA(dir.c_str());
+    std::filesystem::create_directories(GetLogPath());
+    ClearLog();
+    Log("Windows Toolz started");
+    Log("Version: " + CURRENT_VERSION);
     bool darkMode = false;
     std::string mode = LoadColorMode();
     if(mode == "Dark") {
@@ -287,24 +285,14 @@ int RunGUI() {
     sf::Color currentBg = darkMode ? sf::Color::Black : sf::Color::White;
     sf::Color targetBg = currentBg;
     bool animating = false;
+    bool enabled;
     const float sidebarMargin = 10.f;
     sf::Clock animClock;
     sf::RenderWindow window(sf::VideoMode({1280, 720}), "Windows Toolz", sf::Style::Titlebar | sf::Style::Resize | sf::Style::Close); 
     HWND hwnd = window.getSystemHandle();
-    originalProc = reinterpret_cast<WNDPROC>(
-        SetWindowLongPtr(
-            hwnd,
-            GWLP_WNDPROC,
-            reinterpret_cast<LONG_PTR>(CustomWndProc)
-        )
-    );
+    originalProc = reinterpret_cast<WNDPROC>(SetWindowLongPtr(hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(CustomWndProc)));
     BOOL useDark = darkMode ? TRUE : FALSE;
-    DwmSetWindowAttribute(
-        hwnd,
-        20,
-        &useDark,
-        sizeof(useDark)
-    );
+    DwmSetWindowAttribute(hwnd, 20, &useDark, sizeof(useDark));
     window.setView(sf::View(sf::FloatRect({0.f, 0.f}, {1280.f, 720.f})));
     window.setVerticalSyncEnabled(true);
     sf::Vector2u windowSize = window.getSize();
@@ -315,11 +303,7 @@ int RunGUI() {
     float targetSidebarX = sidebarX;
     sf::Image icon;
     if(icon.loadFromFile("assets\\images\\icon.png")) {
-        window.setIcon(
-            icon.getSize().x,
-            icon.getSize().y,
-            icon.getPixelsPtr()
-        );
+        window.setIcon(icon.getSize().x, icon.getSize().y, icon.getPixelsPtr());
     }
     HCURSOR hand = LoadCursor(NULL, IDC_HAND);
     HCURSOR arrow = LoadCursor(NULL, IDC_ARROW);
@@ -335,19 +319,63 @@ int RunGUI() {
     selector.setSize(sf::Vector2f(400.f, 25.f));
     selector.setFillColor(darkMode ? sf::Color::White : sf::Color::Black);
     //FONTS
-    sf::Font font; if(!font.loadFromFile("assets\\fonts\\Roboto.ttf")) return -1;
+    sf::Font font; if(!font.loadFromFile("assets\\fonts\\Roboto.ttf")) {
+        Log("ERROR: Could not find file Roboto.ttf");
+        return -1;
+    }
     //TEXTURES
-    sf::Texture logoT; if(!logoT.loadFromFile("assets\\images\\icon.png")) return -1;
-    sf::Texture UnknownT; if(!UnknownT.loadFromFile("assets\\images\\Unknown.png")) return -1;
-    sf::Texture IconCacheT; if(!IconCacheT.loadFromFile("assets\\images\\IconCache.png")) return -1;
-    sf::Texture Sun; if(!Sun.loadFromFile("assets\\images\\Light.png")) return -1;
-    sf::Texture Moon; if(!Moon.loadFromFile("assets\\images\\Dark.png")) return -1;
-    sf::Texture SystemFixT; if(!SystemFixT.loadFromFile("assets\\images\\SystemFix.png")) return -1;
-    sf::Texture SettingsT; if(!SettingsT.loadFromFile("assets\\images\\Settings.png")) return -1;
-    sf::Texture cliT; if(!cliT.loadFromFile("assets\\images\\cli.png")) return -1;
-    sf::Texture AboutT; if(!AboutT.loadFromFile("assets\\images\\About.png")) return -1;
-    sf::Texture GitHubT; if(!GitHubT.loadFromFile("assets\\images\\Github.png")) return -1;
-    sf::Texture BatchT; if(!BatchT.loadFromFile("assets\\images\\Batch.png")) return -1;
+    sf::Texture logoT; if(!logoT.loadFromFile("assets\\images\\icon.png")) {
+        Log("ERROR: Could not find file icon.png");
+        return -1;
+    }
+    sf::Texture UnknownT; if(!UnknownT.loadFromFile("assets\\images\\Unknown.png")) {
+        Log("ERROR: Could not find file Unknown.png");
+        return -1;
+    }
+    sf::Texture IconCacheT; if(!IconCacheT.loadFromFile("assets\\images\\IconCache.png")) {
+        Log("ERROR: Could not find file IconCache.png");
+        return -1;
+    }
+    sf::Texture Sun; if(!Sun.loadFromFile("assets\\images\\Light.png")) {
+        Log("ERROR: Could not find file Light.png");
+        return -1;
+    }
+    sf::Texture Moon; if(!Moon.loadFromFile("assets\\images\\Dark.png")) {
+        Log("ERROR: Could not find file Dark.png");
+        return -1;
+    }
+    sf::Texture BatchT; if(!BatchT.loadFromFile("assets\\images\\Batch.png")) {
+        Log("ERROR: Could not find file Batch.png");
+        return -1;
+    }
+    sf::Texture SystemFixT; if(!SystemFixT.loadFromFile("assets\\images\\SystemFix.png")) {
+        Log("ERROR: Could not find file SystemFix.png");
+        return -1;
+    }
+    sf::Texture SettingsT; if(!SettingsT.loadFromFile("assets\\images\\Settings.png")) {
+        Log("ERROR: Could not find file Settings.png");
+        return -1;
+    }
+    sf::Texture cliT; if(!cliT.loadFromFile("assets\\images\\cli.png")) {
+        Log("ERROR: Could not find file cli.png");
+        return -1;
+    }
+    sf::Texture LogT; if(!LogT.loadFromFile("assets\\images\\Log.png")) {
+        Log("ERROR: Could not find file Log.png");
+        return -1;
+    }
+    sf::Texture UpdateT; if(!UpdateT.loadFromFile("assets\\images\\Update.png")) {
+        Log("ERROR: Could not find file Update.png");
+        return -1;
+    }
+    sf::Texture AboutT; if(!AboutT.loadFromFile("assets\\images\\About.png")) {
+        Log("ERROR: Could not find file About.png");
+        return -1;
+    }
+    sf::Texture GitHubT; if(!GitHubT.loadFromFile("assets\\images\\Github.png")) {
+        Log("ERROR: Could not find file Github.png");
+        return -1;
+    }
     //HORIZONTAL LINE
     sf::RectangleShape hl;
     hl.setFillColor(darkMode ? sf::Color::White : sf::Color::Black);
@@ -362,6 +390,8 @@ int RunGUI() {
     //SETTINGS SPRITES
     sf::Sprite ModeIcon(UnknownT);
     sf::Sprite cliS(cliT);
+    sf::Sprite LogS(LogT);
+    sf::Sprite UpdateS(UpdateT);
     //MAIN-MENU TEXTS
     sf::Text btnIconCache("Clear Icon Cache", font);
     sf::Text btnSystemFix("Find missing Windows Files", font);
@@ -374,6 +404,8 @@ int RunGUI() {
     sf::Text SettingsTitle("Settings", font);
     sf::Text btnColor("Mode: Unknown", font);
     sf::Text btnCliMode("Enter CLI Mode", font);
+    sf::Text btnLog("Open Log", font);
+    sf::Text btnUpdate("Updates on Startup: Unknown", font);
     //ABOUT TEXTS
     sf::Text AboutTitle("About", font);
     sf::Text AboutGithub("Check this program's GitHub Page", font);
@@ -385,6 +417,8 @@ int RunGUI() {
         &btnIconCache,
         &btnSystemFix,
         &btnCliMode,
+        &btnLog,
+        &btnUpdate,
         &AboutTitle,
         &AboutGithub,
         &AboutAuthor,
@@ -430,6 +464,14 @@ int RunGUI() {
                 hovering = true;
                 selectedSettings = 1;
             }
+            if(LogS.getGlobalBounds().contains(m) || btnLog.getGlobalBounds().contains(m)) {
+                hovering = true;
+                selectedSettings = 2;
+            }
+            if(UpdateS.getGlobalBounds().contains(m) || btnUpdate.getGlobalBounds().contains(m)) {
+                hovering = true;
+                selectedSettings = 3;
+            }
         } else if(currentSidebar == Sidebar::About) {
             if(SettingsS.getGlobalBounds().contains(m)) {
                 hovering = true;
@@ -456,10 +498,22 @@ int RunGUI() {
             if(event.type == sf::Event::MouseButtonPressed) {
                 auto mouse = sf::Mouse::getPosition(window);
                 if(currentSidebar == Sidebar::None) {
-                    if(IconCacheS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y}) || btnIconCache.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) ShellExecuteA(NULL, "open", "batch\\IconCache.bat", NULL, NULL, SW_SHOW);
-                    if(IconCacheEdit.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) ShellExecuteA(NULL, "open", "notepad", "batch\\IconCache.bat", NULL, SW_SHOW);
-                    if(SystemFixS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y}) || btnSystemFix.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) ShellExecuteA(NULL, "runas", "batch\\SystemFix.bat", NULL, NULL, SW_SHOW);
-                    if(SystemFixEdit.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) ShellExecuteA(NULL, "open", "notepad", "batch\\SystemFix.bat", NULL, SW_SHOW);
+                    if(IconCacheS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y}) || btnIconCache.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) {
+                        Log("Starting Icon Cache Cleaner");
+                        ShellExecuteA(NULL, "open", "batch\\IconCache.bat", NULL, NULL, SW_SHOW);
+                    }
+                    if(IconCacheEdit.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) {
+                        Log("Opening IconCache.bat in Notepad");
+                        ShellExecuteA(NULL, "open", "notepad", "batch\\IconCache.bat", NULL, SW_SHOW);
+                    }
+                    if(SystemFixS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y}) || btnSystemFix.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) {
+                        Log("Starting System File Repair");
+                        ShellExecuteA(NULL, "runas", "batch\\SystemFix.bat", NULL, NULL, SW_SHOW);
+                    }
+                    if(SystemFixEdit.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) {
+                        Log("Opening SystemFix.bat in Notepad");
+                        ShellExecuteA(NULL, "open", "notepad", "batch\\SystemFix.bat", NULL, SW_SHOW);
+                    }
                     if(SettingsS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) {
                         currentSidebar = Sidebar::Settings;
                         targetSidebarX = windowSize.x - 500.f;
@@ -477,6 +531,7 @@ int RunGUI() {
                     if(AboutS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) currentSidebar = Sidebar::About;
                     if(ModeIcon.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y}) || btnColor.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) {
                         if(mode == "Light") {
+                            Log("Theme changed to Dark");
                             mode = "Dark";
                             SaveColorMode("Dark");
                             btnColor.setString("Mode: Dark");
@@ -487,6 +542,7 @@ int RunGUI() {
                             animClock.restart();
                             animating = true;
                         } else if (mode == "Dark") {
+                            Log("Theme changed to System");
                             mode = "SystemDefault";
                             SaveColorMode("SystemDefault");
                             btnColor.setString("Mode: System");
@@ -497,6 +553,7 @@ int RunGUI() {
                             animClock.restart();
                             animating = true;
                         } else {
+                            Log("Theme changed to Light");
                             mode = "Light";
                             SaveColorMode("Light");
                             btnColor.setString("Mode: Light");
@@ -510,9 +567,19 @@ int RunGUI() {
                         BOOL useDark = darkMode ? TRUE : FALSE;
                         DwmSetWindowAttribute(window.getSystemHandle(), 20, &useDark, sizeof(useDark));
                     }
-                    if(logoS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y}) || btnCliMode.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) {
+                    if(cliS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y}) || btnCliMode.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) {
                         ShellExecuteA(NULL, "open", "toolz.exe", "cli", NULL, SW_SHOW);
                         return 0;
+                    }
+                    if(LogS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y}) || btnLog.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) {
+                        ShellExecuteA(NULL, "open", "notepad", (GetLogPath() + "\\latest.log").c_str(), NULL, SW_SHOW);
+                    }
+                    if(UpdateS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y}) || btnUpdate.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) {
+                        enabled = LoadUpdateCheck();
+                        SaveUpdateCheck(!enabled);
+                        checkedForUpdates = true;
+                        Log(std::string("Auto update check ") + (!enabled ? "enabled" : "disabled"));
+                        break;
                     }
                 } else if(currentSidebar == Sidebar::About) {
                     if(AboutS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) {
@@ -543,9 +610,11 @@ int RunGUI() {
                     if(event.key.code == sf::Keyboard::Enter) {
                         switch(selectedMain) {
                             case 0:
+                                Log("Starting Icon Cache Cleaner");
                                 ShellExecuteA(NULL, "open", "batch\\IconCache.bat", NULL, NULL, SW_SHOW);
                                 break;
                             case 1:
+                                Log("Starting System File Repair");
                                 ShellExecuteA(NULL, "runas", "batch\\SystemFix.bat", NULL, NULL, SW_SHOW);
                                 break;
                         }
@@ -553,20 +622,21 @@ int RunGUI() {
                 } else if(currentSidebar == Sidebar::Settings) {
                     if(event.key.code == sf::Keyboard::Down) {
                         selectedSettings++;
-                        if(selectedSettings > 1) {
+                        if(selectedSettings > 3) {
                             selectedSettings = 0;
                         }
                     }
                     if(event.key.code == sf::Keyboard::Up) {
                         selectedSettings--;
                         if(selectedSettings < 0) {
-                            selectedSettings = 1;
+                            selectedSettings = 3;
                         }
                     }
                     if(event.key.code == sf::Keyboard::Enter) {
                         switch(selectedSettings) {
                             case 0: {
                                 if(mode == "Light") {
+                                    Log("Theme changed to Dark");
                                     mode = "Dark";
                                     SaveColorMode("Dark");
                                     btnColor.setString("Mode: Dark");
@@ -577,6 +647,7 @@ int RunGUI() {
                                     animClock.restart();
                                     animating = true;
                                 } else if (mode == "Dark") {
+                                    Log("Theme changed to System");
                                     mode = "SystemDefault";
                                     SaveColorMode("SystemDefault");
                                     btnColor.setString("Mode: System");
@@ -587,6 +658,7 @@ int RunGUI() {
                                     animClock.restart();
                                     animating = true;
                                 } else {
+                                    Log("Theme changed to Light");
                                     mode = "Light";
                                     SaveColorMode("Light");
                                     btnColor.setString("Mode: Light");
@@ -605,6 +677,16 @@ int RunGUI() {
                                 ShellExecuteA(NULL, "open", "toolz", "cli", NULL, SW_SHOW);
                                 return 0;
                                 break;
+                            case 2:
+                                ShellExecuteA(NULL, "open", "notepad", (GetLogPath() + "\\latest.log").c_str(), NULL, SW_SHOW);
+                                break;
+                            case 3: {
+                                bool enabled = LoadUpdateCheck();
+                                SaveUpdateCheck(!enabled);
+                                checkedForUpdates = true;
+                                Log(std::string("Auto update check ") + (!enabled ? "enabled" : "disabled"));
+                                break;
+                            }    
                         }
                     }
                 } else if(currentSidebar == Sidebar::About) {
@@ -685,6 +767,12 @@ int RunGUI() {
                 case 1:
                     btnCliMode.setFillColor(selectedTextColor);
                     break;
+                case 2:
+                    btnLog.setFillColor(selectedTextColor);
+                    break;
+                case 3:
+                    btnUpdate.setFillColor(selectedTextColor);
+                    break;
             }
         } else if(currentSidebar == Sidebar::About) {
             switch(selectedAbout) {
@@ -736,6 +824,12 @@ int RunGUI() {
             btnColor.setCharacterSize(24); btnColor.setPosition({sidebarX + 30.f, 75.f}); window.draw(btnColor);
             cliS.setPosition({sidebarX, 107.5f}); window.draw(cliS);
             btnCliMode.setCharacterSize(24); btnCliMode.setPosition({sidebarX + 30.f, 105.f}); window.draw(btnCliMode);
+            LogS.setPosition({sidebarX, 137.5f}); window.draw(LogS);
+            btnLog.setCharacterSize(24); btnLog.setPosition({sidebarX + 30.f, 135.f}); window.draw(btnLog);
+            UpdateS.setPosition({sidebarX, 167.5}); window.draw(UpdateS);
+            btnUpdate.setCharacterSize(24); btnUpdate.setPosition({sidebarX + 30.f, 165.f}); window.draw(btnUpdate);
+            if(LoadUpdateCheck()) btnUpdate.setString("Updates on Startup: ON");
+            else btnUpdate.setString("Updates on Startup: OFF");
         } else if(currentSidebar == Sidebar::About) {
             SettingsBox.setFillColor(darkMode ? sf::Color::Black : sf::Color::White);
             AboutBox.setFillColor(darkMode ? sf::Color(30, 30, 30) : sf::Color(235, 235, 235));
@@ -749,15 +843,25 @@ int RunGUI() {
             AboutVersion.setCharacterSize(24); AboutVersion.setPosition({sidebarX, 135.f}); window.draw(AboutVersion);
         }
         window.display();
-        if(!checkedForUpdates) {
-            CheckForUpdates();
-            checkedForUpdates = true;
+        if(LoadUpdateCheck()) {
+            if(!checkedForUpdates) {
+                CheckForUpdates();
+                checkedForUpdates = true;
+            }
         }
     }
     return 0;
 }
 
 int RunCLI(int argc, char** argv) {
+    char path[MAX_PATH];
+    GetModuleFileNameA(NULL, path, MAX_PATH);
+    std::string exePath(path);
+    std::string dir = exePath.substr(0, exePath.find_last_of("\\/"));
+    SetCurrentDirectoryA(dir.c_str());
+    ClearLog();
+    Log("Windows Toolz started");
+    Log("Version: " + CURRENT_VERSION);
     std::string mode = LoadColorMode();
     if(mode == "Dark") {
         system("color 0F");
@@ -773,6 +877,7 @@ int RunCLI(int argc, char** argv) {
         }
     }
     UpdateCliTheme();
+    bool enabled;
     //MENU OPTIONS
     std::vector<std::string> MainMenuOptions = {
         "Clear Icon Cache",
@@ -784,7 +889,9 @@ int RunCLI(int argc, char** argv) {
         "Back",
         "Mode = Unknown",
         "Edit Batch Files",
-        "Switch to GUI"
+        "Switch to GUI",
+        "Open Log",
+        "Updates on Startup: Unknown"
     };
     std::vector<std::string> BatchOptions = {
         "Back",
@@ -798,10 +905,12 @@ int RunCLI(int argc, char** argv) {
     while(true) {
         while(!settingsOpen) {
             drawMenu(MainMenuOptions, selected);
-            if(!checkedForUpdates) {
-                CheckForUpdates();
-                checkedForUpdates = true;
-            } 
+            if(LoadUpdateCheck()) {
+                if(!checkedForUpdates) {
+                    CheckForUpdates();
+                    checkedForUpdates = true;
+                }
+            }
             key = _getch();
             if(key == 72) {
                 selected--;
@@ -818,9 +927,11 @@ int RunCLI(int argc, char** argv) {
         if(!settingsOpen) {
             switch(selected) {
                 case 0:
+                    Log("Starting Icon Cache Cleaner");
                     ShellExecuteA(NULL, "open", "batch\\IconCache.bat", NULL, NULL, SW_SHOW);
                     break;
                 case 1:
+                    Log("Starting System File Repair");
                     ShellExecuteA(NULL, "runas", "batch\\SystemFix.bat", NULL, NULL, SW_SHOW);
                     break;
                 case 2:
@@ -840,6 +951,8 @@ int RunCLI(int argc, char** argv) {
             } else {
                 SettingsOptions[1] = "Mode = System";
             }
+            if(LoadUpdateCheck()) SettingsOptions[5] = "Updates on Startup: ON";
+            else SettingsOptions[5] = "Updates on Startup: OFF";
             drawSettings(SettingsOptions, selected);
             key = _getch();
             if(key == 72) {
@@ -861,10 +974,12 @@ int RunCLI(int argc, char** argv) {
                     break;
                 case 1: 
                     if(mode == "Light") {
+                        Log("Theme changed to Dark");
                         mode = "Dark";
                         SaveColorMode("Dark");
                         system("color 0F");
                     } else if(mode == "Dark") {
+                        Log("Theme changed to System");
                         mode = "SystemDefault";
                         SaveColorMode("SystemDefault");
                         if(GetSystemColorMode()) {
@@ -873,6 +988,7 @@ int RunCLI(int argc, char** argv) {
                             system("color F0");
                         }
                     } else {
+                        Log("Theme changed to Light");
                         mode = "Light";
                         SaveColorMode("Light");
                         system("color F0");
@@ -899,9 +1015,11 @@ int RunCLI(int argc, char** argv) {
                                     batchOpen = false;
                                     break;
                                 case 1:
+                                    Log("Opening IconCache.bat in Notepad");
                                     ShellExecuteA(NULL, "open", "notepad", "batch\\IconCache.bat", NULL, SW_SHOW);
                                     break;
                                 case 2:
+                                    Log("Opening SystemFix.bat in Notepad");
                                     ShellExecuteA(NULL, "open", "notepad", "batch\\SystemFix.bat", NULL, SW_SHOW);
                                     break;
                             }
@@ -914,6 +1032,15 @@ int RunCLI(int argc, char** argv) {
                     ShellExecuteA(NULL, "open", "toolz.exe", NULL, NULL, SW_SHOW);
                     FreeConsole();
                     ExitProcess(0);
+                case 4:
+                    ShellExecuteA(NULL, "open", "notepad", (GetLogPath() + "\\latest.log").c_str(), NULL, SW_SHOW);
+                    break;
+                case 5:
+                    enabled = LoadUpdateCheck();
+                    SaveUpdateCheck(!enabled);
+                    checkedForUpdates = true;
+                    Log(std::string("Auto update check ") + (!enabled ? "enabled" : "disabled"));
+                    break;
             }
         }
     }

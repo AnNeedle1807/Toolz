@@ -1,6 +1,6 @@
-New in v0.3.0-beta:
-- New UI, now with Settings and About menus as a Sidebar,
-- Update checking, so now a message box will appear asking you if you want to update.
+New in v0.4.0-beta:
+- Logs, where you can check what the progam does, and find errors if the program fails to start. You can access it by going into settings and click "Open Log"
+- A new setting, now you can disable update notifications during startup.
 
-Changes in v0.3.0-beta:
-- Removed Editing Batch files, now you can edit batch files from the menu, click the icon next to the tool you want to edit.
+Fixed bugs in v0.4.0-beta:
+- You could click the icon while the Settings sidebar was active, which resulted in CLI to open. Now this doesn't happen. 
