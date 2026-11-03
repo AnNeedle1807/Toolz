@@ -80,3 +80,6 @@ Testing/
 #WiX files
 *.wixpdb
 *.wixobj
+
+#1.0.0 development
+Windows/tools/
