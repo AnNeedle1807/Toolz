@@ -82,4 +82,4 @@ Testing/
 *.wixobj
 
 #1.0.0 development
-tools/*
+Windows/tools/
