@@ -12,27 +12,16 @@
 #include <iomanip>
 #pragma comment(lib, "winhttp.lib")
 
-struct Tool {
-    std::string name;
-    std::string description;
-    std::string icon;
-    std::string scriptWin;
-    std::string scriptLinux;
-    bool verified;
-};
+WNDPROC originalProc = nullptr;
+
+const std::string CURRENT_VERSION = "v0.4.1-beta";
+bool checkedForUpdates = false;
 
 enum class Sidebar {
     Settings,
     About,
     None
 };
-
-WNDPROC originalProc = nullptr;
-
-const std::string CURRENT_VERSION = "v0.4.0-beta";
-bool checkedForUpdates = false;
-
-std::vector<Tool> Tools;
 
 std::string GetLogPath() {
     char path[MAX_PATH];
@@ -343,6 +332,10 @@ int RunGUI() {
         Log("ERROR: Could not find file Unknown.png");
         return -1;
     }
+    sf::Texture IconCacheT; if(!IconCacheT.loadFromFile("assets\\images\\IconCache.png")) {
+        Log("ERROR: Could not find file IconCache.png");
+        return -1;
+    }
     sf::Texture Sun; if(!Sun.loadFromFile("assets\\images\\Light.png")) {
         Log("ERROR: Could not find file Light.png");
         return -1;
@@ -353,6 +346,10 @@ int RunGUI() {
     }
     sf::Texture BatchT; if(!BatchT.loadFromFile("assets\\images\\Batch.png")) {
         Log("ERROR: Could not find file Batch.png");
+        return -1;
+    }
+    sf::Texture SystemFixT; if(!SystemFixT.loadFromFile("assets\\images\\SystemFix.png")) {
+        Log("ERROR: Could not find file SystemFix.png");
         return -1;
     }
     sf::Texture SettingsT; if(!SettingsT.loadFromFile("assets\\images\\Settings.png")) {
@@ -384,6 +381,10 @@ int RunGUI() {
     hl.setFillColor(darkMode ? sf::Color::White : sf::Color::Black);
     //MAIN-MENU SPRITES
     sf::Sprite logoS(logoT);
+    sf::Sprite IconCacheS(IconCacheT);
+    sf::Sprite IconCacheEdit(BatchT);
+    sf::Sprite SystemFixS(SystemFixT);
+    sf::Sprite SystemFixEdit(BatchT);
     sf::Sprite BatchS(BatchT);
     sf::Sprite GithubS(GitHubT);
     //SETTINGS SPRITES
@@ -391,6 +392,9 @@ int RunGUI() {
     sf::Sprite cliS(cliT);
     sf::Sprite LogS(LogT);
     sf::Sprite UpdateS(UpdateT);
+    //MAIN-MENU TEXTS
+    sf::Text btnIconCache("Clear Icon Cache", font);
+    sf::Text btnSystemFix("Find missing Windows Files", font);
     //SIDEBAR BUTTONS
     sf::RectangleShape SettingsBox;
     sf::RectangleShape AboutBox;
@@ -410,6 +414,8 @@ int RunGUI() {
     std::vector<sf::Text*> texts = {
         &btnColor,
         &SettingsTitle,
+        &btnIconCache,
+        &btnSystemFix,
         &btnCliMode,
         &btnLog,
         &btnUpdate,
@@ -423,6 +429,20 @@ int RunGUI() {
         auto mouse = sf::Mouse::getPosition(window);
         sf::Vector2f m((float)mouse.x, (float)mouse.y);
         if(currentSidebar == Sidebar::None) {
+            if(IconCacheS.getGlobalBounds().contains(m) || btnIconCache.getGlobalBounds().contains(m)) {
+                hovering = true;
+                selectedMain = 0;
+            }
+            if(IconCacheEdit.getGlobalBounds().contains(m)) {
+                hovering = true;
+            }
+            if(SystemFixS.getGlobalBounds().contains(m) || btnSystemFix.getGlobalBounds().contains(m)) {
+                hovering = true;
+                selectedMain = 1;
+            }
+            if(SystemFixEdit.getGlobalBounds().contains(m)) {
+                hovering = true;
+            }
             if(SettingsS.getGlobalBounds().contains(m)) {
                 hovering = true;
             }   
@@ -478,6 +498,22 @@ int RunGUI() {
             if(event.type == sf::Event::MouseButtonPressed) {
                 auto mouse = sf::Mouse::getPosition(window);
                 if(currentSidebar == Sidebar::None) {
+                    if(IconCacheS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y}) || btnIconCache.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) {
+                        Log("Starting Icon Cache Cleaner");
+                        ShellExecuteA(NULL, "open", "batch\\IconCache.bat", NULL, NULL, SW_SHOW);
+                    }
+                    if(IconCacheEdit.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) {
+                        Log("Opening IconCache.bat in Notepad");
+                        ShellExecuteA(NULL, "open", "notepad", "batch\\IconCache.bat", NULL, SW_SHOW);
+                    }
+                    if(SystemFixS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y}) || btnSystemFix.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) {
+                        Log("Starting System File Repair");
+                        ShellExecuteA(NULL, "runas", "batch\\SystemFix.bat", NULL, NULL, SW_SHOW);
+                    }
+                    if(SystemFixEdit.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) {
+                        Log("Opening SystemFix.bat in Notepad");
+                        ShellExecuteA(NULL, "open", "notepad", "batch\\SystemFix.bat", NULL, SW_SHOW);
+                    }
                     if(SettingsS.getGlobalBounds().contains({(float)mouse.x, (float)mouse.y})) {
                         currentSidebar = Sidebar::Settings;
                         targetSidebarX = windowSize.x - 500.f;
@@ -561,17 +597,27 @@ int RunGUI() {
                 if(currentSidebar == Sidebar::None) {
                     if(event.key.code == sf::Keyboard::Down) {
                         selectedMain++;
-                        if(selectedMain > 0) {
+                        if(selectedMain > 1) {
                             selectedMain = 0;
                         }
                     }
                     if(event.key.code == sf::Keyboard::Up) {
                         selectedMain--;
                         if(selectedMain < 0) {
-                            selectedMain = 0;
+                            selectedMain = 1;
                         }
                     }
                     if(event.key.code == sf::Keyboard::Enter) {
+                        switch(selectedMain) {
+                            case 0:
+                                Log("Starting Icon Cache Cleaner");
+                                ShellExecuteA(NULL, "open", "batch\\IconCache.bat", NULL, NULL, SW_SHOW);
+                                break;
+                            case 1:
+                                Log("Starting System File Repair");
+                                ShellExecuteA(NULL, "runas", "batch\\SystemFix.bat", NULL, NULL, SW_SHOW);
+                                break;
+                        }
                     }
                 } else if(currentSidebar == Sidebar::Settings) {
                     if(event.key.code == sf::Keyboard::Down) {
@@ -704,7 +750,16 @@ int RunGUI() {
         sf::Color textColor = darkMode ? sf::Color::White : sf::Color::Black;
         for(auto t : texts) t->setFillColor(textColor);
         sf::Color selectedTextColor = darkMode ? sf::Color::Black : sf::Color::White;
-        if(currentSidebar == Sidebar::Settings) {
+        if(currentSidebar == Sidebar::None) {
+            switch(selectedMain) {
+                case 0:
+                    btnIconCache.setFillColor(selectedTextColor);
+                    break;
+                case 1:
+                    btnSystemFix.setFillColor(selectedTextColor);
+                    break;
+            }
+        } else if(currentSidebar == Sidebar::Settings) {
             switch(selectedSettings) {
                 case 0:
                     btnColor.setFillColor(selectedTextColor);
@@ -735,6 +790,12 @@ int RunGUI() {
         }
         logoS.setScale({0.25f, 0.25f}); logoS.setOrigin({logoS.getLocalBounds().width / 2.f, logoS.getLocalBounds().height / 2.f}); logoS.setPosition({centerX, logoS.getGlobalBounds().height / 2.f + 5.f}); window.draw(logoS);
         hl.setOrigin({hl.getLocalBounds().width / 2.f, hl.getLocalBounds().height / 2.f}); hl.setSize(sf::Vector2f(windowSize.x - 20.f, 2.f)); hl.setPosition({centerX, logoS.getGlobalBounds().height + 10.f}); window.draw(hl);
+        IconCacheS.setPosition({0.f, 140.f}); window.draw(IconCacheS);
+        btnIconCache.setCharacterSize(24); btnIconCache.setPosition({30.f, 135.f}); window.draw(btnIconCache);
+        IconCacheEdit.setPosition({400.f, 140.f}); window.draw(IconCacheEdit);
+        SystemFixS.setPosition({0.f, 170.f}); window.draw(SystemFixS);
+        btnSystemFix.setCharacterSize(24); btnSystemFix.setPosition({30.f, 165.f}); window.draw(btnSystemFix);
+        SystemFixEdit.setPosition({400.f, 170.f}); window.draw(SystemFixEdit);
         sidebarBg.setPosition({sidebarX - 20.f, 0.f}); sidebarBg.setSize({520.f, static_cast<float>(windowSize.y)}); window.draw(sidebarBg);
         SettingsBox.setPosition({sidebarX - 50.f, 10.f}); window.draw(SettingsBox);
         AboutBox.setPosition({sidebarX - 50.f, 60.f}); window.draw(AboutBox);
@@ -819,6 +880,8 @@ int RunCLI(int argc, char** argv) {
     bool enabled;
     //MENU OPTIONS
     std::vector<std::string> MainMenuOptions = {
+        "Clear Icon Cache",
+        "Find missing system files",
         "Settings",
         "About"
     };
@@ -864,10 +927,18 @@ int RunCLI(int argc, char** argv) {
         if(!settingsOpen) {
             switch(selected) {
                 case 0:
+                    Log("Starting Icon Cache Cleaner");
+                    ShellExecuteA(NULL, "open", "batch\\IconCache.bat", NULL, NULL, SW_SHOW);
+                    break;
+                case 1:
+                    Log("Starting System File Repair");
+                    ShellExecuteA(NULL, "runas", "batch\\SystemFix.bat", NULL, NULL, SW_SHOW);
+                    break;
+                case 2:
                     settingsOpen = true;
                     selected = 0; 
                     break;
-                case 1:
+                case 3:
                     MessageBoxA(NULL, (std::string("Windows Toolz\nVersion: ") + CURRENT_VERSION).c_str(), "About", MB_ICONINFORMATION);
                     break;
             }
