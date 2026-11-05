@@ -1,6 +1,7 @@
 # VS Code
 .vscode
 *.code-workspace
+.prettierrc
 
 # Prerequisites
 *.d
